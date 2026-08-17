@@ -66,7 +66,10 @@ struct LibraryListView: View {
             checkout: checkout,
             state: viewModel.downloadStates[checkout.id] ?? .notDownloaded,
             onDownload: { Task { await viewModel.download(checkout) } },
-            onOpen: { previewURL = viewModel.localFileURL(for: checkout) }
+            onOpen: {
+                guard let url = viewModel.localFileURL(for: checkout) else { return }
+                if !EPUBOpener.shared.open(url) { previewURL = url }
+            }
         )
         .swipeActions(edge: .trailing) {
             if viewModel.downloadStates[checkout.id] == .downloaded {

@@ -42,6 +42,52 @@ struct OdiloAPIClient {
         return try JSONDecoder().decode([Checkout].self, from: data)
     }
 
+    /// Fetches the full detail for a single catalog record, including the
+    /// `metadata` groups the search endpoint omits.
+    func fetchRecordDetail(id: String, credentials: LibraryCredentials) async throws -> RecordDetail {
+        var components = URLComponents(string: "https://\(Self.host)/opac/api/v2/records/\(id)")
+        components?.queryItems = [URLQueryItem(name: "enableMetadata", value: "true")]
+        guard let url = components?.url else { throw LibraryAPIError.invalidURL }
+
+        var request = URLRequest(url: url)
+        request.httpMethod = "GET"
+        applyCommonHeaders(to: &request, credentials: credentials)
+        request.setValue("6", forHTTPHeaderField: "api-version")
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+
+        let (data, http) = try await performLogged(request)
+        guard (200..<300).contains(http.statusCode) else { throw LibraryAPIError.httpError(http.statusCode) }
+        return try JSONDecoder().decode(RecordDetail.self, from: data)
+    }
+
+    /// Searches the library catalog (not just your own checkouts) via the
+    /// `records` endpoint, ordered by relevance.
+    func search(query: String, limit: Int = 18, offset: Int = 0, credentials: LibraryCredentials) async throws -> SearchResponse {
+        var components = URLComponents(string: "https://\(Self.host)/opac/api/v2/records/")
+        components?.queryItems = [
+            URLQueryItem(name: "limit", value: String(limit)),
+            URLQueryItem(name: "offset", value: String(offset)),
+            URLQueryItem(name: "order", value: "relevance:desc"),
+            URLQueryItem(name: "limitFacetValues", value: "21"),
+            URLQueryItem(name: "faceted", value: "true"),
+            URLQueryItem(name: "lists", value: "true"),
+            URLQueryItem(name: "showExperiences", value: "true"),
+            URLQueryItem(name: "save", value: "true"),
+            URLQueryItem(name: "query", value: "allfields_txt:\(query)"),
+        ]
+        guard let url = components?.url else { throw LibraryAPIError.invalidURL }
+
+        var request = URLRequest(url: url)
+        request.httpMethod = "GET"
+        applyCommonHeaders(to: &request, credentials: credentials)
+        request.setValue("7", forHTTPHeaderField: "api-version")
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+
+        let (data, http) = try await performLogged(request)
+        guard (200..<300).contains(http.statusCode) else { throw LibraryAPIError.httpError(http.statusCode) }
+        return try JSONDecoder().decode(SearchResponse.self, from: data)
+    }
+
     func downloadEPUB(for checkout: Checkout, credentials: LibraryCredentials) async throws -> Data {
         guard let downloadUrlString = checkout.downloadUrl,
               let firstURL = URL(string: downloadUrlString + "&format=CB_DOWNLOAD") else {

@@ -51,6 +51,7 @@ struct BookRowView: View {
         case .downloaded:
             Button(action: onOpen) {
                 Label("Read", systemImage: "book.fill")
+                    .foregroundStyle(.white)
             }
             .buttonStyle(.borderedProminent)
             .tint(LibraryTheme.accent)

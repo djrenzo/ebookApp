@@ -39,7 +39,7 @@ struct DownloadsListView: View {
     private func row(for book: DownloadedBook) -> some View {
         let fileURL = viewModel.fileURL(for: book)
         return DownloadedBookRow(book: book, fileURL: fileURL) {
-            previewURL = fileURL
+            if !EPUBOpener.shared.open(fileURL) { previewURL = fileURL }
         }
         .swipeActions(edge: .trailing) {
             Button(role: .destructive) {
