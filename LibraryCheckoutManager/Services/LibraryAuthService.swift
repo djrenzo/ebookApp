@@ -86,7 +86,7 @@ final class LibraryAuthService: NSObject {
             let session = ASWebAuthenticationSession(url: url, callbackURLScheme: Self.callbackScheme) { callbackURL, error in
                 if let callbackURL {
                     continuation.resume(returning: callbackURL)
-                } else if case ASWebAuthenticationSessionError.canceledLogin = error {
+                } else if let error, case ASWebAuthenticationSessionError.canceledLogin = error {
                     continuation.resume(throwing: LibraryAuthError.cancelled)
                 } else {
                     continuation.resume(throwing: error ?? LibraryAuthError.missingCode)

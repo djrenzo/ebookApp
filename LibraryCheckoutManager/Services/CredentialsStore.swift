@@ -39,9 +39,9 @@ actor CredentialsStore {
     func save(_ credentials: LibraryCredentials) {
         write(.patronId, credentials.patronId)
         write(.appToken, credentials.appToken)
-        write(.appTokenExpiresAt, Self.dateFormatter.string(from: credentials.appTokenExpiresAt))
+        write(.appTokenExpiresAt, dateFormatter.string(from: credentials.appTokenExpiresAt))
         write(.patronToken, credentials.patronToken)
-        write(.patronTokenExpiresAt, Self.dateFormatter.string(from: credentials.patronTokenExpiresAt))
+        write(.patronTokenExpiresAt, dateFormatter.string(from: credentials.patronTokenExpiresAt))
         write(.patronRefreshToken, credentials.patronRefreshToken)
         write(.displayName, credentials.displayName)
         write(.email, credentials.email)
@@ -51,7 +51,7 @@ actor CredentialsStore {
     /// patron token untouched.
     func updateAppToken(_ appToken: String, expiresAt: Date) {
         write(.appToken, appToken)
-        write(.appTokenExpiresAt, Self.dateFormatter.string(from: expiresAt))
+        write(.appTokenExpiresAt, dateFormatter.string(from: expiresAt))
     }
 
     func clear() {
@@ -60,10 +60,13 @@ actor CredentialsStore {
         }
     }
 
-    private static let dateFormatter = ISO8601DateFormatter()
+    // Instance (not static) so it's protected by this actor's isolation —
+    // ISO8601DateFormatter isn't Sendable, so a shared `static let` isn't
+    // concurrency-safe under Swift 6 strict checking.
+    private let dateFormatter = ISO8601DateFormatter()
 
     private func readDate(_ key: Key) -> Date? {
-        readString(key).flatMap(Self.dateFormatter.date(from:))
+        readString(key).flatMap(dateFormatter.date(from:))
     }
 
     private func readString(_ key: Key) -> String? {
