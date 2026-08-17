@@ -88,6 +88,25 @@ struct OdiloAPIClient {
         return try JSONDecoder().decode(SearchResponse.self, from: data)
     }
 
+    /// Checks out a catalog record to the patron, returning the new
+    /// checkout's id, download URL, and due date.
+    func checkout(recordId: String, credentials: LibraryCredentials) async throws -> CheckoutResult {
+        guard let url = URL(string: "https://\(Self.host)/opac/api/v2/records/\(recordId)/checkout") else {
+            throw LibraryAPIError.invalidURL
+        }
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        applyCommonHeaders(to: &request, credentials: credentials)
+        request.setValue("7", forHTTPHeaderField: "api-version")
+        request.setValue(credentials.oauthToken, forHTTPHeaderField: "OAuth-Token")
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        request.httpBody = Data("from=SEARCH_SUGGEST&patronId=\(credentials.patronId)".utf8)
+
+        let (data, http) = try await performLogged(request)
+        guard (200..<300).contains(http.statusCode) else { throw LibraryAPIError.httpError(http.statusCode) }
+        return try JSONDecoder().decode(CheckoutResult.self, from: data)
+    }
+
     func downloadEPUB(for checkout: Checkout, credentials: LibraryCredentials) async throws -> Data {
         guard let downloadUrlString = checkout.downloadUrl,
               let firstURL = URL(string: downloadUrlString + "&format=CB_DOWNLOAD") else {

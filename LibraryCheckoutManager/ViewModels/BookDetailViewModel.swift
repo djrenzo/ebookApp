@@ -8,6 +8,10 @@ final class BookDetailViewModel {
     private(set) var isLoading = false
     private(set) var errorMessage: String?
 
+    private(set) var isCheckingOut = false
+    private(set) var checkoutError: String?
+    private(set) var didCheckOut = false
+
     private let apiClient = OdiloAPIClient()
 
     func load(id: String) async {
@@ -20,5 +24,21 @@ final class BookDetailViewModel {
             errorMessage = (error as? LocalizedError)?.errorDescription ?? error.localizedDescription
         }
         isLoading = false
+    }
+
+    @discardableResult
+    func checkout(recordId: String) async -> Bool {
+        isCheckingOut = true
+        checkoutError = nil
+        defer { isCheckingOut = false }
+        do {
+            let credentials = await CredentialsStore.shared.load()
+            _ = try await apiClient.checkout(recordId: recordId, credentials: credentials)
+            didCheckOut = true
+            return true
+        } catch {
+            checkoutError = (error as? LocalizedError)?.errorDescription ?? error.localizedDescription
+            return false
+        }
     }
 }

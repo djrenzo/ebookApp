@@ -1,6 +1,8 @@
 import SwiftUI
 
 struct RootTabView: View {
+    @State private var libraryViewModel = LibraryViewModel()
+
     var body: some View {
         TabView {
             LibraryListView()
@@ -13,5 +15,6 @@ struct RootTabView: View {
                 .tabItem { Label("Settings", systemImage: "gearshape.fill") }
         }
         .tint(LibraryTheme.accent)
+        .environment(libraryViewModel)
     }
 }

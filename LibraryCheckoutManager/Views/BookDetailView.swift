@@ -3,12 +3,17 @@ import SwiftUI
 struct BookDetailView: View {
     let record: SearchRecord
     @State private var viewModel = BookDetailViewModel()
+    @Environment(LibraryViewModel.self) private var libraryViewModel
 
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 24) {
                 header
+                checkoutButton
                 if let message = viewModel.errorMessage {
+                    LibraryErrorBanner(message: message)
+                }
+                if let message = viewModel.checkoutError {
                     LibraryErrorBanner(message: message)
                 }
                 if let description = viewModel.detail?.description, !description.isEmpty {
@@ -46,6 +51,31 @@ struct BookDetailView: View {
 
     private var byline: String {
         viewModel.detail?.byline ?? record.byline
+    }
+
+    private var checkoutButton: some View {
+        Button {
+            Task {
+                if await viewModel.checkout(recordId: record.id) {
+                    await libraryViewModel.loadCheckouts()
+                }
+            }
+        } label: {
+            Group {
+                if viewModel.isCheckingOut {
+                    ProgressView().tint(.white)
+                } else if viewModel.didCheckOut {
+                    Label("Checked Out", systemImage: "checkmark.circle.fill")
+                } else {
+                    Label("Checkout", systemImage: "arrow.down.circle")
+                }
+            }
+            .foregroundStyle(.white)
+            .frame(maxWidth: .infinity)
+        }
+        .buttonStyle(.borderedProminent)
+        .tint(LibraryTheme.accent)
+        .disabled(viewModel.isCheckingOut || viewModel.didCheckOut)
     }
 
     private var cover: some View {

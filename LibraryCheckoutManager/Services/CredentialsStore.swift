@@ -9,7 +9,7 @@ actor CredentialsStore {
     private let service = "com.superapp.librarycheckoutmanager.credentials"
 
     private enum Key: String, CaseIterable {
-        case patronId, bearerToken, jsessionId, awsalb, awsalbcors
+        case patronId, bearerToken, jsessionId, awsalb, awsalbcors, oauthToken
     }
 
     func load() -> LibraryCredentials {
@@ -19,7 +19,8 @@ actor CredentialsStore {
             bearerToken: readString(.bearerToken) ?? seeded.bearerToken,
             jsessionId: readString(.jsessionId) ?? seeded.jsessionId,
             awsalb: readString(.awsalb) ?? seeded.awsalb,
-            awsalbcors: readString(.awsalbcors) ?? seeded.awsalbcors
+            awsalbcors: readString(.awsalbcors) ?? seeded.awsalbcors,
+            oauthToken: readString(.oauthToken) ?? seeded.oauthToken
         )
     }
 
@@ -29,6 +30,7 @@ actor CredentialsStore {
         write(.jsessionId, credentials.jsessionId)
         write(.awsalb, credentials.awsalb)
         write(.awsalbcors, credentials.awsalbcors)
+        write(.oauthToken, credentials.oauthToken)
     }
 
     private func readString(_ key: Key) -> String? {

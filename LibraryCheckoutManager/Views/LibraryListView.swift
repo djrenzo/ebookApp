@@ -2,7 +2,7 @@ import SwiftUI
 import QuickLook
 
 struct LibraryListView: View {
-    @State private var viewModel = LibraryViewModel()
+    @Environment(LibraryViewModel.self) private var viewModel
     @State private var previewURL: URL?
 
     var body: some View {

@@ -7,6 +7,7 @@ struct SettingsView: View {
     @State private var jsessionId = ""
     @State private var awsalb = ""
     @State private var awsalbcors = ""
+    @State private var oauthToken = ""
     @State private var isSaving = false
     @State private var didSave = false
 
@@ -22,6 +23,7 @@ struct SettingsView: View {
                     LabeledCredentialField(title: "JSESSIONID", text: $jsessionId)
                     LabeledCredentialField(title: "AWSALB", text: $awsalb)
                     LabeledCredentialField(title: "AWSALBCORS", text: $awsalbcors)
+                    LabeledCredentialField(title: "OAuth Token", text: $oauthToken)
                 }
                 Section {
                     Text("These come from a captured request to your library account and expire after a few days. Paste fresh values here when the Library screen starts showing errors.")
@@ -62,6 +64,7 @@ struct SettingsView: View {
         jsessionId = credentials.jsessionId
         awsalb = credentials.awsalb
         awsalbcors = credentials.awsalbcors
+        oauthToken = credentials.oauthToken
     }
 
     private func save() async {
@@ -71,7 +74,8 @@ struct SettingsView: View {
             bearerToken: bearerToken,
             jsessionId: jsessionId,
             awsalb: awsalb,
-            awsalbcors: awsalbcors
+            awsalbcors: awsalbcors,
+            oauthToken: oauthToken
         )
         await CredentialsStore.shared.save(credentials)
         isSaving = false

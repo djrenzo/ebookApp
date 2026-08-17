@@ -8,6 +8,7 @@ struct LibraryCredentials: Sendable, Equatable {
     var jsessionId: String
     var awsalb: String
     var awsalbcors: String
+    var oauthToken: String
 
     /// The values captured from your account when this app was set up.
     /// Used to seed the Keychain the first time the app runs, so the
@@ -18,6 +19,7 @@ struct LibraryCredentials: Sendable, Equatable {
         bearerToken: "50a6f2c98e136fac",
         jsessionId: "9233BC78A02EFF7C520E1FDA26B2BDBA",
         awsalb: "Dj60hphPYbji536KG59oNHQLzMdmmqXZV4W7xDWc18gM5jQoykq61fzbbE7QL1Vwr+8yaWKn3qUJVgcAMBOiGZvmuK4dbTA/A08Pfhc3GAkirrinKaPiwNtYQHzw",
-        awsalbcors: "Dj60hphPYbji536KG59oNHQLzMdmmqXZV4W7xDWc18gM5jQoykq61fzbbE7QL1Vwr+8yaWKn3qUJVgcAMBOiGZvmuK4dbTA/A08Pfhc3GAkirrinKaPiwNtYQHzw"
+        awsalbcors: "Dj60hphPYbji536KG59oNHQLzMdmmqXZV4W7xDWc18gM5jQoykq61fzbbE7QL1Vwr+8yaWKn3qUJVgcAMBOiGZvmuK4dbTA/A08Pfhc3GAkirrinKaPiwNtYQHzw",
+        oauthToken: "0f87d88e-2203-49f1-b710-e4c5972aefb6"
     )
 }

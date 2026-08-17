@@ -2,8 +2,9 @@
 <g clip-path="url(#clip0_32_30)">
 <rect width="512" height="512" fill="#0F0F0F"/>
 <g opacity="0.92">
-<path d="M164 296A92 92 0 0 0 348 296" stroke="#E2E2E2" stroke-width="20" stroke-linecap="round"/>
-<rect x="196" y="126" width="120" height="192" rx="60" fill="#E2E2E2"/>
+<rect x="176" y="140" width="160" height="232" rx="14" fill="#E2E2E2"/>
+<line x1="214" y1="140" x2="214" y2="372" stroke="#0F0F0F" stroke-width="10" stroke-linecap="round"/>
+<path d="M280 112 L300 112 L300 150 L290 168 L280 150 Z" fill="#E2E2E2"/>
 </g>
 </g>
 <defs>
