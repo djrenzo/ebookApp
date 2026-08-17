@@ -18,7 +18,9 @@ final class BookDetailViewModel {
         isLoading = true
         errorMessage = nil
         do {
-            let credentials = await CredentialsStore.shared.load()
+            guard let credentials = try await LibraryAuthService.shared.validCredentials() else {
+                throw LibraryAPIError.notAuthenticated
+            }
             detail = try await apiClient.fetchRecordDetail(id: id, credentials: credentials)
         } catch {
             errorMessage = (error as? LocalizedError)?.errorDescription ?? error.localizedDescription
@@ -32,7 +34,9 @@ final class BookDetailViewModel {
         checkoutError = nil
         defer { isCheckingOut = false }
         do {
-            let credentials = await CredentialsStore.shared.load()
+            guard let credentials = try await LibraryAuthService.shared.validCredentials() else {
+                throw LibraryAPIError.notAuthenticated
+            }
             _ = try await apiClient.checkout(recordId: recordId, credentials: credentials)
             didCheckOut = true
             return true

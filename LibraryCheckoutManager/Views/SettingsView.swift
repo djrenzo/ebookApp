@@ -2,39 +2,53 @@ import SwiftUI
 
 struct SettingsView: View {
     @Bindable private var logger = RequestLogger.shared
-    @State private var patronId = ""
-    @State private var bearerToken = ""
-    @State private var jsessionId = ""
-    @State private var awsalb = ""
-    @State private var awsalbcors = ""
-    @State private var oauthToken = ""
-    @State private var isSaving = false
-    @State private var didSave = false
+    @State private var credentials: LibraryCredentials?
+    @State private var isLoggingIn = false
+    @State private var loginError: String?
 
     var body: some View {
         NavigationStack {
             Form {
-                Section("Account") {
-                    TextField("Patron ID", text: $patronId)
-                        .keyboardType(.numberPad)
-                }
-                Section("Session") {
-                    LabeledCredentialField(title: "Bearer Token", text: $bearerToken)
-                    LabeledCredentialField(title: "JSESSIONID", text: $jsessionId)
-                    LabeledCredentialField(title: "AWSALB", text: $awsalb)
-                    LabeledCredentialField(title: "AWSALBCORS", text: $awsalbcors)
-                    LabeledCredentialField(title: "OAuth Token", text: $oauthToken)
-                }
-                Section {
-                    Text("These come from a captured request to your library account and expire after a few days. Paste fresh values here when the Library screen starts showing errors.")
-                        .font(.footnote)
-                        .foregroundStyle(.secondary)
-                }
+                accountSection
                 debuggingSection
             }
             .navigationTitle("Settings")
-            .toolbar { toolbarContent }
-            .task { await loadCurrent() }
+            .task { await refreshStatus() }
+        }
+    }
+
+    @ViewBuilder
+    private var accountSection: some View {
+        Section("Account") {
+            if let credentials {
+                LabeledContent("Patron ID", value: credentials.patronId)
+                if !credentials.displayName.isEmpty {
+                    LabeledContent("Name", value: credentials.displayName)
+                }
+                if !credentials.email.isEmpty {
+                    LabeledContent("Email", value: credentials.email)
+                }
+                Button("Log Out", role: .destructive) { Task { await logout() } }
+            } else {
+                Button {
+                    Task { await login() }
+                } label: {
+                    if isLoggingIn {
+                        ProgressView()
+                    } else {
+                        Text("Log In")
+                    }
+                }
+                .disabled(isLoggingIn)
+            }
+        }
+
+        if let loginError {
+            Section {
+                LibraryErrorBanner(message: loginError)
+            }
+            .listRowBackground(Color.clear)
+            .listRowSeparator(.hidden)
         }
     }
 
@@ -50,52 +64,25 @@ struct SettingsView: View {
         }
     }
 
-    private var toolbarContent: some ToolbarContent {
-        ToolbarItem(placement: .confirmationAction) {
-            Button(didSave ? "Saved" : "Save") { Task { await save() } }
-                .disabled(isSaving)
+    private func refreshStatus() async {
+        credentials = await CredentialsStore.shared.load()
+    }
+
+    private func login() async {
+        isLoggingIn = true
+        loginError = nil
+        do {
+            let session = try await LibraryAuthService.shared.login()
+            await CredentialsStore.shared.save(session)
+            credentials = session
+        } catch {
+            loginError = (error as? LocalizedError)?.errorDescription ?? error.localizedDescription
         }
+        isLoggingIn = false
     }
 
-    private func loadCurrent() async {
-        let credentials = await CredentialsStore.shared.load()
-        patronId = credentials.patronId
-        bearerToken = credentials.bearerToken
-        jsessionId = credentials.jsessionId
-        awsalb = credentials.awsalb
-        awsalbcors = credentials.awsalbcors
-        oauthToken = credentials.oauthToken
-    }
-
-    private func save() async {
-        isSaving = true
-        let credentials = LibraryCredentials(
-            patronId: patronId,
-            bearerToken: bearerToken,
-            jsessionId: jsessionId,
-            awsalb: awsalb,
-            awsalbcors: awsalbcors,
-            oauthToken: oauthToken
-        )
-        await CredentialsStore.shared.save(credentials)
-        isSaving = false
-        didSave = true
-        try? await Task.sleep(for: .seconds(1.5))
-        didSave = false
-    }
-}
-
-private struct LabeledCredentialField: View {
-    let title: String
-    @Binding var text: String
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 4) {
-            Text(title).font(.caption).foregroundStyle(.secondary)
-            TextField(title, text: $text)
-                .font(.system(.body, design: .monospaced))
-                .textInputAutocapitalization(.never)
-                .autocorrectionDisabled()
-        }
+    private func logout() async {
+        await LibraryAuthService.shared.logout()
+        credentials = nil
     }
 }

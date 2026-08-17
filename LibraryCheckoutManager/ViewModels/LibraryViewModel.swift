@@ -24,7 +24,9 @@ final class LibraryViewModel {
         loadError = nil
         defer { isLoading = false }
         do {
-            let credentials = await CredentialsStore.shared.load()
+            guard let credentials = try await LibraryAuthService.shared.validCredentials() else {
+                throw LibraryAPIError.notAuthenticated
+            }
             let fetched = try await apiClient.fetchCheckouts(credentials: credentials)
             checkouts = fetched
             for checkout in fetched {
@@ -38,7 +40,9 @@ final class LibraryViewModel {
     func download(_ checkout: Checkout) async {
         downloadStates[checkout.id] = .downloading
         do {
-            let credentials = await CredentialsStore.shared.load()
+            guard let credentials = try await LibraryAuthService.shared.validCredentials() else {
+                throw LibraryAPIError.notAuthenticated
+            }
             let data = try await apiClient.downloadEPUB(for: checkout, credentials: credentials)
             try fileStore.save(data, checkout: checkout)
             downloadStates[checkout.id] = .downloaded

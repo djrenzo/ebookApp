@@ -1,25 +1,38 @@
 import Foundation
 
-/// The patron ID plus session token/cookies needed to call the Odilo API.
-/// These expire after a few days; Settings lets you paste fresh ones.
+/// A signed-in patron session, obtained via `LibraryAuthService.login()`.
+///
+/// `JSESSIONID`/`AWSALB`/`AWSALBCORS` are deliberately not modeled here —
+/// they're ordinary session cookies that `URLSession.shared`'s cookie jar
+/// already tracks automatically from `Set-Cookie` responses, so nothing
+/// needs to hand-carry or persist them.
 struct LibraryCredentials: Sendable, Equatable {
+    /// The patron's library card id.
     var patronId: String
-    var bearerToken: String
-    var jsessionId: String
-    var awsalb: String
-    var awsalbcors: String
-    var oauthToken: String
 
-    /// The values captured from your account when this app was set up.
-    /// Used to seed the Keychain the first time the app runs, so the
-    /// Library screen and Settings work immediately without you having
-    /// to look these up again.
-    static let seeded = LibraryCredentials(
-        patronId: "596270654",
-        bearerToken: "50a6f2c98e136fac",
-        jsessionId: "9233BC78A02EFF7C520E1FDA26B2BDBA",
-        awsalb: "Dj60hphPYbji536KG59oNHQLzMdmmqXZV4W7xDWc18gM5jQoykq61fzbbE7QL1Vwr+8yaWKn3qUJVgcAMBOiGZvmuK4dbTA/A08Pfhc3GAkirrinKaPiwNtYQHzw",
-        awsalbcors: "Dj60hphPYbji536KG59oNHQLzMdmmqXZV4W7xDWc18gM5jQoykq61fzbbE7QL1Vwr+8yaWKn3qUJVgcAMBOiGZvmuK4dbTA/A08Pfhc3GAkirrinKaPiwNtYQHzw",
-        oauthToken: "0f87d88e-2203-49f1-b710-e4c5972aefb6"
-    )
+    /// App-level Bearer token (from `OdiloAPIClient.fetchAppToken()`),
+    /// used as `Authorization` on every call. Not tied to this patron.
+    var appToken: String
+    var appTokenExpiresAt: Date
+
+    /// Per-patron access token, sent as the `OAuth-Token` header on
+    /// mutating calls like checkout.
+    var patronToken: String
+    var patronTokenExpiresAt: Date
+
+    /// Kept for a future silent-renewal call; not used yet.
+    var patronRefreshToken: String
+
+    var displayName: String
+    var email: String
+}
+
+extension LibraryCredentials {
+    var isAppTokenExpired: Bool {
+        Date() >= appTokenExpiresAt
+    }
+
+    var isPatronTokenExpired: Bool {
+        Date() >= patronTokenExpiresAt
+    }
 }

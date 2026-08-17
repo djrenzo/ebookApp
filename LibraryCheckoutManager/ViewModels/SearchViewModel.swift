@@ -61,7 +61,9 @@ final class SearchViewModel {
         isSearching = true
         errorMessage = nil
         do {
-            let credentials = await CredentialsStore.shared.load()
+            guard let credentials = try await LibraryAuthService.shared.validCredentials() else {
+                throw LibraryAPIError.notAuthenticated
+            }
             let response = try await apiClient.search(query: text, limit: pageSize, offset: 0, credentials: credentials)
             guard !Task.isCancelled, text == currentQuery else { return }
             results = response.records
@@ -82,7 +84,9 @@ final class SearchViewModel {
 
         isLoadingMore = true
         do {
-            let credentials = await CredentialsStore.shared.load()
+            guard let credentials = try await LibraryAuthService.shared.validCredentials() else {
+                throw LibraryAPIError.notAuthenticated
+            }
             let response = try await apiClient.search(query: text, limit: pageSize, offset: results.count, credentials: credentials)
             guard text == currentQuery else { return }
             results.append(contentsOf: response.records)

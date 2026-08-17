@@ -1,36 +1,69 @@
 import Foundation
 import Security
 
-/// Keychain-backed storage for the Odilo session credentials. Seeds itself
-/// with `LibraryCredentials.seeded` until the user saves an edit in Settings.
+/// Keychain-backed storage for the signed-in patron session. Returns `nil`
+/// until `save(_:)` is called after a successful `LibraryAuthService.login()`
+/// — there's no seeded fallback anymore, since real credentials come from a
+/// real login instead of a hardcoded session.
 actor CredentialsStore {
     static let shared = CredentialsStore()
 
     private let service = "com.superapp.librarycheckoutmanager.credentials"
 
     private enum Key: String, CaseIterable {
-        case patronId, bearerToken, jsessionId, awsalb, awsalbcors, oauthToken
+        case patronId, appToken, appTokenExpiresAt, patronToken, patronTokenExpiresAt
+        case patronRefreshToken, displayName, email
     }
 
-    func load() -> LibraryCredentials {
-        let seeded = LibraryCredentials.seeded
+    func load() -> LibraryCredentials? {
+        guard let patronId = readString(.patronId),
+              let appToken = readString(.appToken),
+              let appTokenExpiresAt = readDate(.appTokenExpiresAt),
+              let patronToken = readString(.patronToken),
+              let patronTokenExpiresAt = readDate(.patronTokenExpiresAt),
+              let patronRefreshToken = readString(.patronRefreshToken) else {
+            return nil
+        }
         return LibraryCredentials(
-            patronId: readString(.patronId) ?? seeded.patronId,
-            bearerToken: readString(.bearerToken) ?? seeded.bearerToken,
-            jsessionId: readString(.jsessionId) ?? seeded.jsessionId,
-            awsalb: readString(.awsalb) ?? seeded.awsalb,
-            awsalbcors: readString(.awsalbcors) ?? seeded.awsalbcors,
-            oauthToken: readString(.oauthToken) ?? seeded.oauthToken
+            patronId: patronId,
+            appToken: appToken,
+            appTokenExpiresAt: appTokenExpiresAt,
+            patronToken: patronToken,
+            patronTokenExpiresAt: patronTokenExpiresAt,
+            patronRefreshToken: patronRefreshToken,
+            displayName: readString(.displayName) ?? "",
+            email: readString(.email) ?? ""
         )
     }
 
     func save(_ credentials: LibraryCredentials) {
         write(.patronId, credentials.patronId)
-        write(.bearerToken, credentials.bearerToken)
-        write(.jsessionId, credentials.jsessionId)
-        write(.awsalb, credentials.awsalb)
-        write(.awsalbcors, credentials.awsalbcors)
-        write(.oauthToken, credentials.oauthToken)
+        write(.appToken, credentials.appToken)
+        write(.appTokenExpiresAt, Self.dateFormatter.string(from: credentials.appTokenExpiresAt))
+        write(.patronToken, credentials.patronToken)
+        write(.patronTokenExpiresAt, Self.dateFormatter.string(from: credentials.patronTokenExpiresAt))
+        write(.patronRefreshToken, credentials.patronRefreshToken)
+        write(.displayName, credentials.displayName)
+        write(.email, credentials.email)
+    }
+
+    /// Updates just the app token after a silent refresh, leaving the
+    /// patron token untouched.
+    func updateAppToken(_ appToken: String, expiresAt: Date) {
+        write(.appToken, appToken)
+        write(.appTokenExpiresAt, Self.dateFormatter.string(from: expiresAt))
+    }
+
+    func clear() {
+        for key in Key.allCases {
+            delete(key)
+        }
+    }
+
+    private static let dateFormatter = ISO8601DateFormatter()
+
+    private func readDate(_ key: Key) -> Date? {
+        readString(key).flatMap(Self.dateFormatter.date(from:))
     }
 
     private func readString(_ key: Key) -> String? {
@@ -69,5 +102,14 @@ actor CredentialsStore {
         case let status:
             NSLog("CredentialsStore: failed to add \(key.rawValue), status=\(status)")
         }
+    }
+
+    private func delete(_ key: Key) {
+        let query: [CFString: Any] = [
+            kSecClass: kSecClassGenericPassword,
+            kSecAttrService: service,
+            kSecAttrAccount: key.rawValue,
+        ]
+        SecItemDelete(query as CFDictionary)
     }
 }
