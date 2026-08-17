@@ -45,6 +45,8 @@ targets:
         CFBundleIconName: AppIcon
         ITSAppUsesNonExemptEncryption: false
         LSRequiresIPhoneOS: true
+        LSSupportsOpeningDocumentsInPlace: true
+        UIFileSharingEnabled: true
         UIApplicationSupportsIndirectInputEvents: true
         UILaunchStoryboardName: LaunchScreen
         UIRequiredDeviceCapabilities: [arm64]

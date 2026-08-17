@@ -1,8 +1,10 @@
 import Foundation
 
-/// Saves downloaded EPUBs under `Documents/Ebooks/` and keeps a small JSON
-/// manifest of metadata (title, author, cover) so the Downloads tab can list
-/// them without needing the original checkout.
+/// Saves downloaded EPUBs under `Documents/Ebooks/`, which is exposed as a
+/// browsable folder in the Files app (see `UIFileSharingEnabled` and
+/// `LSSupportsOpeningDocumentsInPlace` in project.yml). Metadata (title,
+/// author, cover) is kept in a small JSON manifest in Application Support
+/// instead, so the visible folder only ever contains the user's own EPUBs.
 struct EbookFileStore {
     private let directory: URL
     private let manifestURL: URL
@@ -10,8 +12,19 @@ struct EbookFileStore {
     init() {
         let documents = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
         directory = documents.appendingPathComponent("Ebooks", isDirectory: true)
-        manifestURL = directory.appendingPathComponent("manifest.json")
         try? FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+
+        let support = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
+        try? FileManager.default.createDirectory(at: support, withIntermediateDirectories: true)
+        manifestURL = support.appendingPathComponent("manifest.json")
+
+        // Earlier builds kept the manifest alongside the EPUBs; migrate it
+        // out of the now-visible folder so it doesn't show up in Files.
+        let legacyManifestURL = directory.appendingPathComponent("manifest.json")
+        if !FileManager.default.fileExists(atPath: manifestURL.path),
+           FileManager.default.fileExists(atPath: legacyManifestURL.path) {
+            try? FileManager.default.moveItem(at: legacyManifestURL, to: manifestURL)
+        }
     }
 
     func loadManifest() -> [DownloadedBook] {
