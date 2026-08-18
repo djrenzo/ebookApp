@@ -11,10 +11,10 @@ struct BookDetailView: View {
                 header
                 checkoutButton
                 if let message = viewModel.errorMessage {
-                    LibraryErrorBanner(message: message)
+                    LibraryErrorBanner(title: "Couldn't load this book", message: message, hint: nil)
                 }
                 if let message = viewModel.checkoutError {
-                    LibraryErrorBanner(message: message)
+                    LibraryErrorBanner(title: "Checkout failed", message: message, hint: nil)
                 }
                 if let description = viewModel.detail?.description, !description.isEmpty {
                     descriptionSection(description)

@@ -31,20 +31,27 @@ struct LibraryHeroCard: View {
     }
 }
 
-/// Inline banner shown when the checkouts request or a download fails.
+/// Generic inline error banner, reused across the app for any failed
+/// request — title/hint default to the original checkouts-load copy so
+/// the Library tab doesn't need to change, but every other call site
+/// should pass copy that actually matches what failed.
 struct LibraryErrorBanner: View {
+    var title: String = "Couldn't load your library"
     let message: String
+    var hint: String? = "Update your session in the Settings tab."
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
             HStack(spacing: 8) {
                 Image(systemName: "exclamationmark.triangle.fill").foregroundStyle(.orange)
-                Text("Couldn't load your library").font(.subheadline.bold())
+                Text(title).font(.subheadline.bold())
             }
             Text(message).font(.footnote).foregroundStyle(.secondary)
-            Text("Update your session in the Settings tab.")
-                .font(.footnote.bold())
-                .foregroundStyle(.secondary)
+            if let hint {
+                Text(hint)
+                    .font(.footnote.bold())
+                    .foregroundStyle(.secondary)
+            }
         }
         .padding(16)
         .frame(maxWidth: .infinity, alignment: .leading)

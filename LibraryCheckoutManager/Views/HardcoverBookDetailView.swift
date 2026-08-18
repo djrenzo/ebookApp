@@ -10,14 +10,16 @@ struct HardcoverBookDetailView: View {
         Array(Set(viewModel.editions.compactMap(\.language?.language))).sorted()
     }
 
+    /// Lowercased so "Ebook"/"eBook"/"ebook" all collapse into one option
+    /// instead of showing up as separate formats.
     private var formats: [String] {
-        Array(Set(viewModel.editions.compactMap(\.editionFormat))).sorted()
+        Array(Set(viewModel.editions.compactMap { $0.editionFormat?.lowercased() })).sorted()
     }
 
     private var filteredEditions: [HardcoverEdition] {
         viewModel.editions.filter { edition in
             (selectedLanguage == nil || edition.language?.language == selectedLanguage)
-                && (selectedFormat == nil || edition.editionFormat == selectedFormat)
+                && (selectedFormat == nil || edition.editionFormat?.lowercased() == selectedFormat)
         }
     }
 
@@ -25,7 +27,7 @@ struct HardcoverBookDetailView: View {
         List {
             if let message = viewModel.errorMessage {
                 Section {
-                    LibraryErrorBanner(message: message)
+                    LibraryErrorBanner(title: "Couldn't Load Editions", message: message, hint: nil)
                 }
                 .listRowBackground(Color.clear)
                 .listRowSeparator(.hidden)
@@ -35,7 +37,7 @@ struct HardcoverBookDetailView: View {
                 filtersSection
                 Section("\(filteredEditions.count) editions") {
                     ForEach(filteredEditions) { edition in
-                        NavigationLink(value: EditionSearchQuery(text: searchText(for: edition))) {
+                        NavigationLink(value: EditionSearchQuery(text: searchText(for: edition), titleFallback: book.title)) {
                             editionRow(edition)
                         }
                     }
@@ -46,14 +48,18 @@ struct HardcoverBookDetailView: View {
         .navigationTitle(book.title)
         .navigationBarTitleDisplayMode(.inline)
         .navigationDestination(for: EditionSearchQuery.self) { request in
-            EditionAvailabilityView(query: request.text)
+            EditionAvailabilityView(query: request.text, titleQuery: request.titleFallback)
         }
         .overlay(alignment: .top) {
             if viewModel.isLoading {
                 ProgressView().padding(.top, 8)
             }
         }
-        .task { await viewModel.load(bookId: book.id) }
+        .task {
+            await viewModel.load(bookId: book.id)
+            if languages.contains("Dutch; Flemish") { selectedLanguage = "Dutch; Flemish" }
+            if formats.contains("ebook") { selectedFormat = "ebook" }
+        }
     }
 
     @ViewBuilder
@@ -122,4 +128,5 @@ struct HardcoverBookDetailView: View {
 
 private struct EditionSearchQuery: Hashable {
     let text: String
+    let titleFallback: String
 }

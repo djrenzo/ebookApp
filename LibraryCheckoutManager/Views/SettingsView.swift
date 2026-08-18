@@ -53,7 +53,7 @@ struct SettingsView: View {
 
         if let loginError {
             Section {
-                LibraryErrorBanner(message: loginError)
+                LibraryErrorBanner(title: "Login Failed", message: loginError, hint: nil)
             }
             .listRowBackground(Color.clear)
             .listRowSeparator(.hidden)
@@ -84,7 +84,7 @@ struct SettingsView: View {
 
         if let hardcoverError {
             Section {
-                LibraryErrorBanner(message: hardcoverError)
+                LibraryErrorBanner(title: "Connection Failed", message: hardcoverError, hint: nil)
             }
             .listRowBackground(Color.clear)
             .listRowSeparator(.hidden)
