@@ -48,7 +48,22 @@ extension SearchRecord {
 
 /// Response envelope from `/opac/api/v2/records/`. Facets are returned too
 /// but aren't needed for a plain search bar, so they're left undecoded.
+///
+/// `records` is decoded leniently (defaulting to `[]`) because a
+/// zero-result search appears to omit or null out the field rather than
+/// returning an empty array — without this, a genuine "no results" search
+/// throws a decode error instead of just showing no results.
 struct SearchResponse: Decodable, Sendable {
     let total: Int
     let records: [SearchRecord]
+
+    enum CodingKeys: String, CodingKey {
+        case total, records
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        total = try container.decodeIfPresent(Int.self, forKey: .total) ?? 0
+        records = try container.decodeIfPresent([SearchRecord].self, forKey: .records) ?? []
+    }
 }
