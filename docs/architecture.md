@@ -84,6 +84,36 @@ Every other view model (`SearchViewModel`, `BookDetailViewModel`,
   a short suffix. This is the primary on-device debugging tool for auth
   issues — turn it on, reproduce, check `Settings → View Request Log`.
 
+## Hardcover integration (separate from Odilo)
+
+The app also optionally connects to [Hardcover](https://hardcover.app)
+(`api.hardcover.app/v1/graphql`), a personal book-tracking/cataloging
+service — entirely unrelated to the Odilo/KB library backend, using its own
+GraphQL API and its own auth (a user-pasted personal access token, not an
+OAuth flow). Kept deliberately parallel-but-separate from the Odilo code
+rather than merged in:
+
+- **`HardcoverAPIClient`** — GraphQL client (`HardcoverAPIClient.swift`),
+  same request-logging pattern as `OdiloAPIClient` but otherwise
+  independent. Three queries: `Me` (id/username, used to validate a token),
+  `GetMyBooks` (shelf filtered server-side to `status_id in [1,2]` — 1 =
+  Want to Read, 2 = Currently Reading), and `GetBookEditions(bookId)`.
+- **`HardcoverCredentialsStore`** — its own Keychain service string,
+  storing just `token`/`userId`/`username`. Not merged with
+  `CredentialsStore` since the two services have nothing to do with each
+  other and mixing them would couple unrelated concerns.
+- **Settings** shows a "Hardcover" section directly under the Odilo
+  "Account" section: paste a token → "Connect" validates it via the `Me`
+  query and stores the resolved profile, or "Disconnect" clears it.
+- **Library tab** gets two additional sections below "Checked out" —
+  "Want to Read" and "Currently Reading" — populated by
+  `HardcoverShelfViewModel`, shown only when a Hardcover account is
+  connected. Tapping a book pushes `HardcoverBookDetailView`, which lists
+  all editions of that book (cover, language, ISBN) via
+  `HardcoverEditionsViewModel`. This is browse-only — Hardcover is a
+  tracking/cataloging service, not a lending one, so there's no
+  download/checkout action here the way there is for Odilo records.
+
 ## Conventions worth preserving
 
 - **Decodable models are lenient about optional/missing fields on purpose.**

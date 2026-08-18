@@ -3,6 +3,7 @@ import QuickLook
 
 struct LibraryListView: View {
     @Environment(LibraryViewModel.self) private var viewModel
+    @State private var hardcoverViewModel = HardcoverShelfViewModel()
     @State private var previewURL: URL?
 
     var body: some View {
@@ -10,7 +11,11 @@ struct LibraryListView: View {
             content
                 .navigationTitle("My Library")
                 .quickLookPreview($previewURL)
+                .navigationDestination(for: HardcoverBook.self) { book in
+                    HardcoverBookDetailView(book: book)
+                }
                 .task { await viewModel.loadCheckouts() }
+                .task { await hardcoverViewModel.refresh() }
         }
     }
 
@@ -21,9 +26,13 @@ struct LibraryListView: View {
                 errorSection(error)
             }
             booksSection
+            hardcoverSections
         }
         .listStyle(.insetGrouped)
-        .refreshable { await viewModel.loadCheckouts() }
+        .refreshable {
+            await viewModel.loadCheckouts()
+            await hardcoverViewModel.refresh()
+        }
     }
 
     private var headerSection: some View {
@@ -57,6 +66,33 @@ struct LibraryListView: View {
                 ForEach(viewModel.checkouts) { checkout in
                     bookRow(checkout)
                 }
+            }
+        }
+    }
+
+    @ViewBuilder
+    private var hardcoverSections: some View {
+        if hardcoverViewModel.isConnected {
+            if !hardcoverViewModel.wantToRead.isEmpty {
+                Section("Want to Read") {
+                    ForEach(hardcoverViewModel.wantToRead) { userBook in
+                        NavigationLink(value: userBook.book) {
+                            HardcoverBookRow(book: userBook.book)
+                        }
+                    }
+                }
+            }
+            if !hardcoverViewModel.currentlyReading.isEmpty {
+                Section("Currently Reading") {
+                    ForEach(hardcoverViewModel.currentlyReading) { userBook in
+                        NavigationLink(value: userBook.book) {
+                            HardcoverBookRow(book: userBook.book)
+                        }
+                    }
+                }
+            }
+            if let message = hardcoverViewModel.errorMessage {
+                errorSection(message)
             }
         }
     }
