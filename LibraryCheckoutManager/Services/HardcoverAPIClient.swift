@@ -65,6 +65,7 @@ struct HardcoverAPIClient {
                 id
                 isbn_10
                 isbn_13
+                edition_format
                 image { url }
                 language { language }
               }

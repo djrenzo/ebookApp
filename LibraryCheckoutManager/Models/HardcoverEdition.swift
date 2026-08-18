@@ -4,6 +4,7 @@ struct HardcoverEdition: Decodable, Sendable, Identifiable {
     let id: Int
     let isbn10: String?
     let isbn13: String?
+    let editionFormat: String?
     let image: HardcoverImage?
     let language: HardcoverLanguage?
 
@@ -11,6 +12,7 @@ struct HardcoverEdition: Decodable, Sendable, Identifiable {
         case id
         case isbn10 = "isbn_10"
         case isbn13 = "isbn_13"
+        case editionFormat = "edition_format"
         case image, language
     }
 }
