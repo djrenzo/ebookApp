@@ -8,11 +8,6 @@ import SwiftUI
 struct CatalogSearchResultsView: View {
     var viewModel: SearchViewModel
 
-    /// Extra content shown under the "no results" state — e.g. a "Try with
-    /// Name" fallback when a flow seeded the search with an ISBN. Empty by
-    /// default so the plain Search tab doesn't need to opt out of anything.
-    var emptyResultsAccessory: AnyView = AnyView(EmptyView())
-
     var body: some View {
         Group {
             if viewModel.query.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
@@ -24,10 +19,7 @@ struct CatalogSearchResultsView: View {
             } else if let message = viewModel.errorMessage, viewModel.results.isEmpty {
                 List { errorSection(message) }.listStyle(.insetGrouped)
             } else if viewModel.results.isEmpty && !viewModel.isSearching {
-                VStack(spacing: 20) {
-                    ContentUnavailableView.search(text: viewModel.query)
-                    emptyResultsAccessory
-                }
+                ContentUnavailableView.search(text: viewModel.query)
             } else {
                 resultsList
             }
@@ -36,7 +28,7 @@ struct CatalogSearchResultsView: View {
 
     private var resultsList: some View {
         List {
-            Section("\(viewModel.total) results") {
+            Section("\(viewModel.results.count) results") {
                 ForEach(viewModel.results) { record in
                     NavigationLink(value: record) {
                         SearchResultRow(record: record)

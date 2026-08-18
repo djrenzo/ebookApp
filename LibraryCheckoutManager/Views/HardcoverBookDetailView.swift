@@ -37,7 +37,7 @@ struct HardcoverBookDetailView: View {
                 filtersSection
                 Section("\(filteredEditions.count) editions") {
                     ForEach(filteredEditions) { edition in
-                        NavigationLink(value: EditionSearchQuery(text: searchText(for: edition), titleFallback: book.title)) {
+                        NavigationLink(value: EditionSearchQuery(text: searchText(for: edition), titleFallback: nameQuery(for: edition))) {
                             editionRow(edition)
                         }
                     }
@@ -87,9 +87,18 @@ struct HardcoverBookDetailView: View {
     }
 
     /// Prefer the ISBN for a precise match against the library catalog;
-    /// fall back to the book title when an edition has neither.
+    /// fall back to this edition's own name when it has neither.
     private func searchText(for edition: HardcoverEdition) -> String {
-        edition.isbn13 ?? edition.isbn10 ?? book.title
+        edition.isbn13 ?? edition.isbn10 ?? nameQuery(for: edition)
+    }
+
+    /// This edition's own title when it has one (a translated or regional
+    /// edition can differ from the parent book's title), falling back to
+    /// the book's title otherwise. Used as the name-search fallback in
+    /// `EditionAvailabilityView` so it searches for the specific edition
+    /// you tapped, not just the book in general.
+    private func nameQuery(for edition: HardcoverEdition) -> String {
+        edition.title ?? book.title
     }
 
     private func editionRow(_ edition: HardcoverEdition) -> some View {

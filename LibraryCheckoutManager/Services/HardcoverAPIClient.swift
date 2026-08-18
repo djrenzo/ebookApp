@@ -63,11 +63,13 @@ struct HardcoverAPIClient {
             query GetBookEditions($bookId: Int!) {
               editions(where: {book_id: {_eq: $bookId}}) {
                 id
+                title
                 isbn_10
                 isbn_13
                 edition_format
                 image { url }
                 language { language }
+                book { title contributions { author { name } } }
               }
             }
             """,
