@@ -21,7 +21,8 @@ struct HardcoverAuthor: Decodable, Sendable, Hashable {
 
 extension HardcoverBook {
     var coverURL: URL? {
-        image?.url.flatMap(URL.init(string:))
+        guard let url = image?.url else { return nil }
+        return URL(string: url)
     }
 
     var authorNames: String {

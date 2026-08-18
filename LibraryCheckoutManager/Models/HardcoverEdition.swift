@@ -21,7 +21,8 @@ struct HardcoverLanguage: Decodable, Sendable {
 
 extension HardcoverEdition {
     var coverURL: URL? {
-        image?.url.flatMap(URL.init(string:))
+        guard let url = image?.url else { return nil }
+        return URL(string: url)
     }
 }
 
