@@ -64,7 +64,7 @@ struct EbookFileStore {
         let record = DownloadedBook(
             id: checkout.id,
             title: checkout.title,
-            author: checkout.author,
+            author: checkout.byline,
             coverURLString: checkout.cover,
             fileName: fileName,
             downloadedAt: Date()

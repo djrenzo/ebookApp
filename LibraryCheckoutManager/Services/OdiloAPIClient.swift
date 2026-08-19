@@ -131,7 +131,10 @@ struct OdiloAPIClient {
 
         let (data, http) = try await performLogged(request)
         guard (200..<300).contains(http.statusCode) else { throw LibraryAPIError.httpError(http.statusCode) }
-        return try JSONDecoder().decode([Checkout].self, from: data)
+        guard let rawCheckouts = try JSONSerialization.jsonObject(with: data) as? [Any] else {
+            throw LibraryAPIError.invalidResponse
+        }
+        return Self.decodeLossyArray(Checkout.self, from: rawCheckouts)
     }
 
     /// Fetches the full detail for a single catalog record, including the
@@ -177,7 +180,14 @@ struct OdiloAPIClient {
 
         let (data, http) = try await performLogged(request)
         guard (200..<300).contains(http.statusCode) else { throw LibraryAPIError.httpError(http.statusCode) }
-        return try JSONDecoder().decode(SearchResponse.self, from: data)
+        guard let json = try JSONSerialization.jsonObject(with: data) as? [String: Any] else {
+            throw LibraryAPIError.invalidResponse
+        }
+        // A zero-result search appears to omit or null out `records` rather
+        // than returning an empty array, so this defaults to [] either way.
+        let total = json["total"] as? Int ?? 0
+        let rawRecords = json["records"] as? [Any] ?? []
+        return SearchResponse(total: total, records: Self.decodeLossyArray(SearchRecord.self, from: rawRecords))
     }
 
     /// Checks out a catalog record to the patron, returning the new
@@ -234,6 +244,20 @@ struct OdiloAPIClient {
         let (data, http) = try await performLogged(request)
         guard (200..<300).contains(http.statusCode) else { throw LibraryAPIError.httpError(http.statusCode) }
         return data
+    }
+
+    /// Decodes each element of a JSON array independently, dropping any
+    /// element that fails to decode as `T` instead of failing the whole
+    /// array — Swift's `Decodable` otherwise throws for an entire array the
+    /// moment one element doesn't match, which is what turned a single
+    /// unfamiliar record (e.g. a magazine) into the whole catalog or
+    /// checkout list failing to load.
+    private static func decodeLossyArray<T: Decodable>(_ type: T.Type, from rawArray: [Any]) -> [T] {
+        let decoder = JSONDecoder()
+        return rawArray.compactMap { element in
+            guard let elementData = try? JSONSerialization.data(withJSONObject: element) else { return nil }
+            return try? decoder.decode(T.self, from: elementData)
+        }
     }
 
     /// Performs a request and reports it to `RequestLogger` regardless of

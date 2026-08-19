@@ -33,7 +33,7 @@ struct BookRowView: View {
     private var info: some View {
         VStack(alignment: .leading, spacing: 4) {
             Text(checkout.title).font(.headline).lineLimit(2)
-            Text(checkout.author).font(.subheadline).foregroundStyle(.secondary).lineLimit(1)
+            Text(checkout.byline).font(.subheadline).foregroundStyle(.secondary).lineLimit(1)
             Text("Due \(checkout.dueDateText)").font(.caption).foregroundStyle(.secondary)
             if case .failed(let message) = state {
                 Text(message).font(.caption2).foregroundStyle(.red).lineLimit(2)

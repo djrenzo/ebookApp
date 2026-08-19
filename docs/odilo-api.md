@@ -193,6 +193,41 @@ Content-Type: application/json
 download when `formats` contains `"CB_DOWNLOAD"` and `downloadUrl` is
 non-null (see `Checkout.supportsDownload`).
 
+A magazine/periodical checkout has a different shape — no `author` at all,
+and a `specialFormat` field this app otherwise never sees:
+
+```json
+{
+  "id": "2054262283",
+  "recordId": "00232000",
+  "title": "AutoWeek 2026_31",
+  "cover": "https://covers.odilo.io/publicms/AutoWeek_2026_31/....jpg",
+  "downloadUrl": "https://onlinebibliotheek.odilotk.es/opac/api/v2/checkouts/2054262283/download?patronId=...&token=...",
+  "startTime": 1787150195225,
+  "endTime": 1788964595225,
+  "renewable": false,
+  "renewal": false,
+  "renewed": false,
+  "returnable": true,
+  "expired": false,
+  "formats": ["EBOOK_STREAMING", "OCS"],
+  "displayedOnHistory": false,
+  "resourceType": "TIPO_OCS_PDF;TIPO_STREAMING_PDF",
+  "specialFormat": "MAGAZINE",
+  "originalImageUrl": "https://covers.odilo.io/publicms/AutoWeek_2026_31/...._ORIGINAL.jpg"
+}
+```
+
+Note `formats` has no `"CB_DOWNLOAD"`, so `supportsDownload` is correctly
+`false` — magazines are read via streaming, not the EPUB download flow.
+`author` being entirely absent (not `null`, just missing) is why
+`Checkout.author` is `String?` rather than `String`: a single non-optional
+required field on one array element used to fail the whole
+`[Checkout]` decode, which surfaced as "my library won't load" despite a
+200 response. `OdiloAPIClient.fetchCheckouts`/`.search` now decode each
+array element independently (`decodeLossyArray`) so one unfamiliar record
+can no longer take down the rest of the list.
+
 Implemented as `OdiloAPIClient.fetchCheckouts(credentials:)`.
 
 ---
