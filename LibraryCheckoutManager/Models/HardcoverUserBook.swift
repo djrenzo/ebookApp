@@ -45,6 +45,12 @@ struct HardcoverUserBook: Decodable, Sendable, Identifiable {
     }
 }
 
+extension [HardcoverUserBook] {
+    func sortedByTitle() -> [HardcoverUserBook] {
+        sorted { $0.book.title.localizedStandardCompare($1.book.title) == .orderedAscending }
+    }
+}
+
 struct HardcoverUserBooksResponse: Decodable, Sendable {
     struct DataBody: Decodable, Sendable {
         let me: [MeUserBooks]

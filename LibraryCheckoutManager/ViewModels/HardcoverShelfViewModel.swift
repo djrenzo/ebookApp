@@ -24,8 +24,8 @@ final class HardcoverShelfViewModel {
         errorMessage = nil
         do {
             let books = try await apiClient.fetchMyBooks(token: credentials.token)
-            wantToRead = books.filter { $0.statusId == 1 }
-            currentlyReading = books.filter { $0.statusId == 2 }
+            wantToRead = books.filter { $0.statusId == 1 }.sortedByTitle()
+            currentlyReading = books.filter { $0.statusId == 2 }.sortedByTitle()
         } catch {
             errorMessage = (error as? LocalizedError)?.errorDescription ?? error.localizedDescription
         }
