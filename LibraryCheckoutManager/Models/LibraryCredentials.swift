@@ -20,7 +20,10 @@ struct LibraryCredentials: Sendable, Equatable {
     var patronToken: String
     var patronTokenExpiresAt: Date
 
-    /// Kept for a future silent-renewal call; not used yet.
+    /// Used by `LibraryAuthService.validCredentials()` to silently renew
+    /// the patron session via `OdiloAPIClient.refreshPatronSession()`.
+    /// Rotates on every refresh — the response's new value replaces this
+    /// one, it isn't reused across refreshes.
     var patronRefreshToken: String
 
     var displayName: String

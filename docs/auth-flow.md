@@ -14,7 +14,7 @@ referenced below.
 | Obtained via | static client credentials, no user interaction | real KB SSO login |
 | Lifetime | ~24h (`expiresIn: 86400`) | ~4h (`expiresIn: 14399`) |
 | Sent as | `Authorization: Bearer <token>` on every request | `OAuth-Token: <token>` on checkout only |
-| Refreshed by | calling the token endpoint again with the same static credentials — trivial, already implemented | a `refreshToken` was issued but the refresh call itself is **unconfirmed** (see below) |
+| Refreshed by | calling the token endpoint again with the same static credentials — trivial, already implemented | `POST /opac/api/v2/login/external` again with `{"refresh": <refreshToken>}` instead of `{code, state, ...}` — confirmed, implemented |
 
 The app-level token is not tied to any patron at all — it can be fetched
 before anyone logs in, and is what every non-mutating call (search, record
@@ -92,6 +92,16 @@ acting.
    - Checkout additionally sends  OAuth-Token: <patronToken>
    - JSESSIONID/AWSALB/AWSALBCORS just ride along via URLSession.shared's cookie jar,
      seeded back in step 1 and refreshed by Set-Cookie on every response since.
+
+8. When the patron token expires (~4h), silently renew it instead of
+   re-running steps 2-5:
+
+   App → Odilo   POST /opac/api/v2/login/external?client=app&type=OAUTH2
+                 Authorization: Bearer <appToken>
+                 body: { refresh: <patronRefreshToken> }
+   Odilo → App   same shape as step 5's response, including a *new*
+                 refreshToken that replaces the one just sent.
+   [OdiloAPIClient.refreshPatronSession(), called from LibraryAuthService.validCredentials()]
 ```
 
 Steps 1, 2, and 5 are this app's own `OdiloAPIClient`/`LibraryAuthService`
@@ -125,26 +135,12 @@ page.
 These are open items, not solved problems — don't assume behavior for any
 of them without a fresh capture confirming it:
 
-1. **Patron token refresh is unconfirmed.** `refreshToken` is stored
-   (`LibraryCredentials.patronRefreshToken`) but nothing calls it — no
-   refresh request has been captured yet. Leading hypothesis: the same
-   `POST /opac/api/v2/token/` endpoint, with
-   `grant_type=refresh_token&refresh_token=<token>` instead of
-   `client_credentials`, since it's already confirmed to be a real
-   multi-grant-type OAuth2 token endpoint. Unconfirmed. To verify: capture
-   traffic ~4+ hours after a real login and watch for either a proactive
-   refresh call before a normal request, or a failed request followed by a
-   refresh-shaped one and a retry. It's also entirely possible the official
-   app doesn't implement silent refresh at all and just forces a full
-   re-login — that would be a legitimate answer too, and this app's current
-   fallback (surface an auth error, prompt to log in again) already covers
-   it.
-2. **The step 3d redirect loop is unexplained.** It resolved itself in the
+1. **The step 3d redirect loop is unexplained.** It resolved itself in the
    one full trace this was built from, but *why* it looped once before
    completing was never determined. Not a blocker (the browser sheet
    handles it transparently either way), but worth knowing if login ever
    seems to hang or take an extra visible step.
-3. **A custom callback URL scheme is untested.** Step 2's `callback`
+2. **A custom callback URL scheme is untested.** Step 2's `callback`
    parameter is confirmed to be echoed back verbatim by Odilo, which
    strongly suggests this app could pass its own URL scheme instead of
    reusing the official app's `online.bibliotheek://oauth`. That would

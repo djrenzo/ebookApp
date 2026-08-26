@@ -54,6 +54,15 @@ actor CredentialsStore {
         write(.appTokenExpiresAt, dateFormatter.string(from: expiresAt))
     }
 
+    /// Updates the patron session after a silent refresh. `refreshToken` is
+    /// rotated on every refresh call, so the new one must overwrite the old
+    /// one, not just the access token/expiry.
+    func updatePatronSession(accessToken: String, expiresAt: Date, refreshToken: String) {
+        write(.patronToken, accessToken)
+        write(.patronTokenExpiresAt, dateFormatter.string(from: expiresAt))
+        write(.patronRefreshToken, refreshToken)
+    }
+
     func clear() {
         for key in Key.allCases {
             delete(key)

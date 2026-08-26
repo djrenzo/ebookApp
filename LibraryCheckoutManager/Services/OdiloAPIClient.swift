@@ -119,6 +119,30 @@ struct OdiloAPIClient {
         return try JSONDecoder().decode(OdiloPatronSession.self, from: data)
     }
 
+    /// Silently renews the patron session using the `refreshToken` from a
+    /// previous login or refresh, without running the KB SSO browser flow
+    /// again. Same endpoint and response shape as `completeExternalLogin`,
+    /// but the body is `{"refresh": <token>}` instead of the `code`/`state`
+    /// exchange — confirmed via a real capture taken after the patron token
+    /// had expired. The response includes a **new** `refreshToken` that
+    /// replaces the one just spent, so callers must persist it, not reuse
+    /// the old one.
+    func refreshPatronSession(refreshToken: String, appToken: String) async throws -> OdiloPatronSession {
+        guard let url = URL(string: "https://\(Self.host)/opac/api/v2/login/external?client=app&type=OAUTH2") else {
+            throw LibraryAPIError.invalidURL
+        }
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.setValue("Bearer \(appToken)", forHTTPHeaderField: "Authorization")
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        request.setValue("*/*", forHTTPHeaderField: "Accept")
+        request.httpBody = try JSONEncoder().encode(["refresh": refreshToken])
+
+        let (data, http) = try await performLogged(request)
+        guard (200..<300).contains(http.statusCode) else { throw LibraryAPIError.httpError(http.statusCode) }
+        return try JSONDecoder().decode(OdiloPatronSession.self, from: data)
+    }
+
     func fetchCheckouts(credentials: LibraryCredentials) async throws -> [Checkout] {
         guard let url = URL(string: "https://\(Self.host)/opac/api/v2/patrons/\(credentials.patronId)/checkouts") else {
             throw LibraryAPIError.invalidURL

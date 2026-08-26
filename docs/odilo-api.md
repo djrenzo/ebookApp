@@ -151,11 +151,57 @@ flow — not extracted from anywhere dynamic, just echoed back.
 flags — not reproduced here; only what's actually consumed is listed. See
 `OdiloPatronSession` for the exact decoded subset.)
 
-`expiresIn` here is ~4 hours. `refreshToken` is captured and stored but
-**not yet used** — no refresh call has been confirmed against a real
-request. See `docs/auth-flow.md`'s "Known unknowns" section.
+`expiresIn` here is ~4 hours.
 
 Implemented as `OdiloAPIClient.completeExternalLogin(code:state:appToken:)`.
+
+---
+
+## `POST /opac/api/v2/login/external` — refresh the patron session
+
+Same endpoint and URL as "complete the login" above (`?client=app&type=OAUTH2`),
+but used to silently renew an existing patron session instead of running the
+KB SSO browser flow again. Confirmed via a real capture taken after the
+patron token had expired.
+
+**Request**
+
+```
+Authorization: Bearer <appToken>
+Content-Type: application/json
+
+{ "refresh": "<patronRefreshToken>" }
+```
+
+Note this is **not** `grant_type=refresh_token` against the `/token/`
+endpoint — that was the leading hypothesis before this was captured, and
+it was wrong. The refresh is a different body shape on the *same*
+`login/external` endpoint used for the initial code exchange.
+
+**Response** — identical shape to "complete the login," including a
+**new** `refreshToken` that replaces the one just spent:
+
+```json
+{
+  "id": "<patron id>",
+  "name": "<display name>",
+  "email": "<email>",
+  "session": "<matches the JSESSIONID cookie>",
+  "accessToken": "<new UUID>",
+  "refreshToken": "<new UUID — replaces the one sent in the request>",
+  "expiresIn": 14399,
+  ...
+}
+```
+
+The capture this was confirmed from also refreshed the app-level token
+immediately beforehand and used that fresh token as this call's
+`Authorization`, but nothing suggests the app token needs to be fresh for
+this call specifically — every endpoint here just needs *a* valid app
+token, per the auth model above.
+
+Implemented as `OdiloAPIClient.refreshPatronSession(refreshToken:appToken:)`,
+called from `LibraryAuthService.validCredentials()`.
 
 ---
 

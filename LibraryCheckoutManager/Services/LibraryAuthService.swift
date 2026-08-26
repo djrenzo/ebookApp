@@ -61,19 +61,36 @@ final class LibraryAuthService: NSObject {
     }
 
     /// Returns credentials for making API calls, transparently refreshing
-    /// the app-level token if it's expired. Returns `nil` if there's no
-    /// signed-in patron. Patron-token expiry isn't silently recovered yet
-    /// (no refresh-token exchange has been confirmed against a real
-    /// request) — callers will see an auth error from Odilo if that's
-    /// expired, the same as before login existed.
+    /// the app-level token and/or the patron token if either is expired.
+    /// Returns `nil` if there's no signed-in patron. If the refresh call
+    /// itself fails (e.g. the refresh token has also expired or been
+    /// revoked), that error propagates — callers fall back to the existing
+    /// "surface an auth error, prompt to log in again" behavior.
     func validCredentials() async throws -> LibraryCredentials? {
         guard var credentials = await CredentialsStore.shared.load() else { return nil }
-        guard credentials.isAppTokenExpired else { return credentials }
 
-        let appToken = try await apiClient.fetchAppToken()
-        credentials.appToken = appToken.token
-        credentials.appTokenExpiresAt = Date().addingTimeInterval(TimeInterval(appToken.expiresIn))
-        await CredentialsStore.shared.updateAppToken(appToken.token, expiresAt: credentials.appTokenExpiresAt)
+        if credentials.isAppTokenExpired {
+            let appToken = try await apiClient.fetchAppToken()
+            credentials.appToken = appToken.token
+            credentials.appTokenExpiresAt = Date().addingTimeInterval(TimeInterval(appToken.expiresIn))
+            await CredentialsStore.shared.updateAppToken(appToken.token, expiresAt: credentials.appTokenExpiresAt)
+        }
+
+        if credentials.isPatronTokenExpired {
+            let patronSession = try await apiClient.refreshPatronSession(
+                refreshToken: credentials.patronRefreshToken,
+                appToken: credentials.appToken
+            )
+            credentials.patronToken = patronSession.accessToken
+            credentials.patronTokenExpiresAt = Date().addingTimeInterval(TimeInterval(patronSession.expiresIn))
+            credentials.patronRefreshToken = patronSession.refreshToken
+            await CredentialsStore.shared.updatePatronSession(
+                accessToken: credentials.patronToken,
+                expiresAt: credentials.patronTokenExpiresAt,
+                refreshToken: credentials.patronRefreshToken
+            )
+        }
+
         return credentials
     }
 
