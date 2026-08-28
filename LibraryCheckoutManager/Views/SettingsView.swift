@@ -11,6 +11,12 @@ struct SettingsView: View {
     @State private var isConnectingHardcover = false
     @State private var hardcoverError: String?
 
+    @State private var resend: ResendCredentials?
+    @State private var resendAPIKeyInput = ""
+    @State private var resendFromEmailInput = ""
+    @State private var resendKindleEmailInput = ""
+    @State private var isSavingResend = false
+
     private let hardcoverAPIClient = HardcoverAPIClient()
 
     var body: some View {
@@ -18,6 +24,7 @@ struct SettingsView: View {
             Form {
                 accountSection
                 hardcoverSection
+                sendToKindleSection
                 debuggingSection
             }
             .navigationTitle("Settings")
@@ -91,6 +98,44 @@ struct SettingsView: View {
         }
     }
 
+    @ViewBuilder
+    private var sendToKindleSection: some View {
+        Section("Send to Kindle") {
+            if let resend {
+                LabeledContent("From", value: resend.fromEmail)
+                LabeledContent("Kindle Address", value: resend.kindleEmail)
+                Button("Disconnect", role: .destructive) { Task { await disconnectResend() } }
+            } else {
+                LabeledCredentialField(title: "Resend API Key", text: $resendAPIKeyInput)
+                emailField(title: "From Email", text: $resendFromEmailInput)
+                emailField(title: "Kindle Email", text: $resendKindleEmailInput)
+                Button {
+                    Task { await saveResend() }
+                } label: {
+                    if isSavingResend {
+                        ProgressView()
+                    } else {
+                        Text("Save")
+                    }
+                }
+                .disabled(isSavingResend || resendAPIKeyInput.isEmpty || resendFromEmailInput.isEmpty || resendKindleEmailInput.isEmpty)
+            }
+            Text("From Email must be a sender Amazon has approved under Manage Your Content and Devices → Preferences → Personal Document Settings, or your Kindle will reject the email.")
+                .font(.footnote)
+                .foregroundStyle(.secondary)
+        }
+    }
+
+    private func emailField(title: String, text: Binding<String>) -> some View {
+        VStack(alignment: .leading, spacing: 4) {
+            Text(title).font(.caption).foregroundStyle(.secondary)
+            TextField(title, text: text)
+                .keyboardType(.emailAddress)
+                .textInputAutocapitalization(.never)
+                .autocorrectionDisabled()
+        }
+    }
+
     private var debuggingSection: some View {
         Section("Debugging") {
             Toggle("Log network requests", isOn: $logger.isEnabled)
@@ -106,6 +151,7 @@ struct SettingsView: View {
     private func refreshStatus() async {
         credentials = await CredentialsStore.shared.load()
         hardcover = await HardcoverCredentialsStore.shared.load()
+        resend = await ResendCredentialsStore.shared.load()
     }
 
     private func login() async {
@@ -144,6 +190,26 @@ struct SettingsView: View {
     private func disconnectHardcover() async {
         await HardcoverCredentialsStore.shared.clear()
         hardcover = nil
+    }
+
+    private func saveResend() async {
+        isSavingResend = true
+        let saved = ResendCredentials(
+            apiKey: resendAPIKeyInput,
+            fromEmail: resendFromEmailInput,
+            kindleEmail: resendKindleEmailInput
+        )
+        await ResendCredentialsStore.shared.save(saved)
+        resend = saved
+        resendAPIKeyInput = ""
+        resendFromEmailInput = ""
+        resendKindleEmailInput = ""
+        isSavingResend = false
+    }
+
+    private func disconnectResend() async {
+        await ResendCredentialsStore.shared.clear()
+        resend = nil
     }
 }
 

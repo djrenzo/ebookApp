@@ -3,7 +3,9 @@ import SwiftUI
 struct DownloadedBookRow: View {
     let book: DownloadedBook
     let fileURL: URL
+    let isSendingToKindle: Bool
     let onOpen: () -> Void
+    let onSendToKindle: () -> Void
 
     var body: some View {
         HStack(alignment: .top, spacing: 14) {
@@ -46,6 +48,13 @@ struct DownloadedBookRow: View {
             }
             ShareLink(item: fileURL) {
                 Image(systemName: "square.and.arrow.up")
+            }
+            if isSendingToKindle {
+                ProgressView()
+            } else {
+                Button(action: onSendToKindle) {
+                    Image(systemName: "envelope")
+                }
             }
         }
         .font(.title3)

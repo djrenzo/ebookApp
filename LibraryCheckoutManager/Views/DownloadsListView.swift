@@ -11,6 +11,28 @@ struct DownloadsListView: View {
                 .navigationTitle("Downloads")
                 .quickLookPreview($previewURL)
                 .onAppear { viewModel.refresh() }
+                .alert(
+                    "Sent to Kindle",
+                    isPresented: Binding(
+                        get: { viewModel.kindleSendConfirmation != nil },
+                        set: { if !$0 { viewModel.kindleSendConfirmation = nil } }
+                    )
+                ) {
+                    Button("OK") { viewModel.kindleSendConfirmation = nil }
+                } message: {
+                    Text(viewModel.kindleSendConfirmation ?? "")
+                }
+                .alert(
+                    "Couldn't Send to Kindle",
+                    isPresented: Binding(
+                        get: { viewModel.kindleSendError != nil },
+                        set: { if !$0 { viewModel.kindleSendError = nil } }
+                    )
+                ) {
+                    Button("OK") { viewModel.kindleSendError = nil }
+                } message: {
+                    Text(viewModel.kindleSendError ?? "")
+                }
         }
     }
 
@@ -38,9 +60,17 @@ struct DownloadsListView: View {
 
     private func row(for book: DownloadedBook) -> some View {
         let fileURL = viewModel.fileURL(for: book)
-        return DownloadedBookRow(book: book, fileURL: fileURL) {
-            if !EPUBOpener.shared.open(fileURL) { previewURL = fileURL }
-        }
+        return DownloadedBookRow(
+            book: book,
+            fileURL: fileURL,
+            isSendingToKindle: viewModel.sendingBookID == book.id,
+            onOpen: {
+                if !EPUBOpener.shared.open(fileURL) { previewURL = fileURL }
+            },
+            onSendToKindle: {
+                Task { await viewModel.sendToKindle(book) }
+            }
+        )
         .swipeActions(edge: .trailing) {
             Button(role: .destructive) {
                 viewModel.delete(book)
